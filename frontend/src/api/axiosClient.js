@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:5000/api/v1',
+  baseURL: 'https://badcourt-fullstack.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
