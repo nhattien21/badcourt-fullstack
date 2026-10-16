@@ -83,7 +83,7 @@ export default function BookingPage() {
   const dateInputRef = useRef(null);
 
   const [step, setStep] = useState(1);
-  
+
 const [date, setDate] = useState(getTodayDate());
   const [currentClub, setCurrentClub] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -97,7 +97,13 @@ const [date, setDate] = useState(getTodayDate());
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
+useEffect(() => {
+    const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
+    if (savedUser) {
+      setFullName(savedUser.fullName || '');
+      setPhoneNumber(savedUser.phoneNumber || '');
+    }
+  }, []);
   const fetchCourtAndBookings = async (isBackground = false) => {
     try {
       if (!isBackground) setLoading(true);
@@ -152,11 +158,7 @@ const [date, setDate] = useState(getTodayDate());
 
       setBookedMap(newBookedMap);
 
-      const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
-      if (savedUser) {
-        setFullName(savedUser.fullName || '');
-        setPhoneNumber(savedUser.phoneNumber || '');
-      }
+      
     } catch (err) {
       console.error(err);
     } finally {
