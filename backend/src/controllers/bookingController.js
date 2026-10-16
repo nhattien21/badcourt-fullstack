@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const Court = require('../models/Court');
+const User = require('../models/User');
 
 // Hàm chuyển đổi format "HH:mm" thành số phút để dễ so sánh
 // Ví dụ: "07:30" => 450 phút
@@ -73,12 +74,21 @@ exports.getAvailableSlots = async (req, res) => {
   }
 };
 
-// @desc    Đặt sân mới (Có chống trùng giờ và tính tiền tự động)
+// @desc    Đặt sân mới (Hỗ trợ Admin đặt hộ tự nhận diện tài khoản khách qua SĐT)
 // @route   POST /api/v1/bookings
 // @access  Private (Customer hoặc Admin đặt hộ)
 exports.createBooking = async (req, res) => {
   try {
-    const { courtId, bookingDate, startTime, endTime, note, targetUserId } = req.body;
+    const { 
+      courtId, 
+      bookingDate, 
+      startTime, 
+      endTime, 
+      note, 
+      targetUserId, 
+      phoneNumber, 
+      fullName 
+    } = req.body;
 
     // Kiểm tra sân có tồn tại và đang hoạt động không
     const court = await Court.findById(courtId);
@@ -100,7 +110,6 @@ exports.createBooking = async (req, res) => {
     await autoUpdateExpiredBookings({ court: courtId, bookingDate });
 
     // 1. CHỐNG RACE CONDITION / TRÙNG LỊCH:
-    // Hai khoảng thời gian [A, B] và [C, D] trùng nhau khi: A < D && B > C
     const conflictingBooking = await Booking.findOne({
       court: courtId,
       bookingDate,
@@ -118,14 +127,35 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // 2. TỰ ĐỘNG TÍNH TIỀN:
-    const durationHours = (endMinutes - startMinutes) / 60;
-    const totalPrice = Math.round(durationHours * court.pricePerHour);
+    // 2. TÍNH TIỀN: Ưu tiên giá truyền từ Frontend, nếu không thì tự tính theo giờ sân
+    const durationHours = req.body.durationHours || (endMinutes - startMinutes) / 60;
+    const totalPrice = req.body.totalPrice !== undefined 
+      ? Number(req.body.totalPrice) 
+      : Math.round(durationHours * court.pricePerHour);
 
-    // Xác định người đặt: nếu Admin truyền targetUserId thì đặt hộ, còn lại là chính user đăng nhập
+    // 3. XÁC ĐỊNH NGƯỜI ĐẶT (ĐẶT HỘ KHÁCH HÀNG):
     let bookedBy = req.user._id;
-    if (req.user.role === 'ADMIN' && targetUserId) {
+
+    // Nếu gửi kèm targetUserId trực tiếp
+    if (targetUserId) {
       bookedBy = targetUserId;
+    } 
+    // Nếu có SĐT hoặc Họ tên gửi lên: tìm kiếm trong collection users
+    else if (phoneNumber || fullName) {
+      const searchConditions = [];
+      if (phoneNumber && phoneNumber.trim()) {
+        searchConditions.push({ phoneNumber: phoneNumber.trim() });
+      }
+      if (fullName && fullName.trim()) {
+        searchConditions.push({ fullName: new RegExp(`^${fullName.trim()}$`, 'i') });
+      }
+
+      if (searchConditions.length > 0) {
+        const foundUser = await User.findOne({ $or: searchConditions });
+        if (foundUser) {
+          bookedBy = foundUser._id; // Gán đơn này chính chủ cho tài khoản của khách!
+        }
+      }
     }
 
     const booking = await Booking.create({

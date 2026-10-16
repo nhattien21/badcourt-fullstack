@@ -318,6 +318,7 @@ useEffect(() => {
           endTime: item.endTime,
           durationHours: parseFloat(item.hoursCount),
           totalPrice: item.price,
+          phoneNumber: phoneNumber,
           note: `Khách: ${fullName} - SĐT: ${phoneNumber} [${item.subName}: ${item.ranges}]`
         };
         return axiosClient.post('/bookings', payload);

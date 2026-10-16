@@ -162,12 +162,13 @@ export default function AdminDashboard() {
           <table className="w-full text-left text-xs">
             <thead className="bg-gray-50 text-gray-600 uppercase font-semibold border-b border-gray-100">
               <tr>
-                <th className="py-3 px-6">Khách Hàng</th>
-                <th className="py-3 px-6">Sân</th>
-                <th className="py-3 px-6">Ngày & Giờ</th>
-                <th className="py-3 px-6">Tổng Tiền</th>
-                <th className="py-3 px-6">Trạng Thái</th>
-                <th className="py-3 px-6">Hành Động</th>
+                <th className="py-3 px-4 text-left">Tài khoản đặt</th>
+    <th className="py-3 px-4 text-left">Người đặt (Khách)</th>
+    <th className="py-3 px-4 text-left">Sân</th>
+    <th className="py-3 px-4 text-left">Ngày & Giờ</th>
+    <th className="py-3 px-4 text-left">Tổng tiền</th>
+    <th className="py-3 px-4 text-left">Trạng thái</th>
+    <th className="py-3 px-4 text-left">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-gray-700">
