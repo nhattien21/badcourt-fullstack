@@ -70,15 +70,21 @@ const getCourtSubCourts = (court) => {
     name: `Sân ${idx + 1}`
   }));
 };
-
+const getTodayDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 export default function BookingPage() {
   const { courtId } = useParams();
   const navigate = useNavigate();
   const dateInputRef = useRef(null);
 
   const [step, setStep] = useState(1);
-  // Mặc định vào ngày 11/10/2026
-  const [date, setDate] = useState('2026-10-11');
+  
+const [date, setDate] = useState(getTodayDate());
   const [currentClub, setCurrentClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
