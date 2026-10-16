@@ -35,12 +35,12 @@ export default function AdminDashboard() {
     // 1. Tải dữ liệu ban đầu
     fetchDashboardData();
 
-    // 2. TỰ ĐỘNG POLLING REAL-TIME MỖI 3 GIÂY (Khách đặt hoặc hủy bên kia thì Admin tự cập nhật ngay)
+    // 2. Polling cập nhật mỗi 3 giây
     const interval = setInterval(() => {
       fetchDashboardData(true);
     }, 3000);
 
-    // 3. Tự cập nhật ngay khi Admin click quay lại tab
+    // 3. Tự cập nhật khi quay lại tab
     const handleFocus = () => fetchDashboardData(true);
     window.addEventListener('focus', handleFocus);
 
@@ -56,12 +56,12 @@ export default function AdminDashboard() {
     const target = bookings.find((b) => String(b._id) === bIdStr);
     const oldStatus = target ? target.status : 'CONFIRMED';
 
-    // Cập nhật ngay lập tức tại UI Admin
+    // Cập nhật UI ngay lập tức
     setBookings((prev) =>
       prev.map((item) => (String(item._id) === bIdStr ? { ...item, status: newStatus } : item))
     );
 
-    // Điều chỉnh Doanh thu tức thì
+    // Điều chỉnh doanh thu tức thì
     setStats((prev) => {
       if (!target) return prev;
       let delta = 0;
@@ -163,69 +163,105 @@ export default function AdminDashboard() {
             <thead className="bg-gray-50 text-gray-600 uppercase font-semibold border-b border-gray-100">
               <tr>
                 <th className="py-3 px-4 text-left">Tài khoản đặt</th>
-    <th className="py-3 px-4 text-left">Người đặt (Khách)</th>
-    <th className="py-3 px-4 text-left">Sân</th>
-    <th className="py-3 px-4 text-left">Ngày & Giờ</th>
-    <th className="py-3 px-4 text-left">Tổng tiền</th>
-    <th className="py-3 px-4 text-left">Trạng thái</th>
-    <th className="py-3 px-4 text-left">Hành động</th>
+                <th className="py-3 px-4 text-left">Người đặt (Khách)</th>
+                <th className="py-3 px-4 text-left">Sân</th>
+                <th className="py-3 px-4 text-left">Ngày & Giờ</th>
+                <th className="py-3 px-4 text-left">Tổng tiền</th>
+                <th className="py-3 px-4 text-left">Trạng thái</th>
+                <th className="py-3 px-4 text-left">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-gray-700">
               {filteredBookings.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-8 text-gray-400">
+                  <td colSpan="7" className="text-center py-8 text-gray-400">
                     Không có đơn đặt sân nào phù hợp với bộ lọc
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((b) => (
-                  <tr key={String(b._id)} className="hover:bg-gray-50/60 transition">
-                    <td className="py-4 px-6">
-                      <p className="font-bold text-gray-900">{b.user?.fullName || 'Khách vãng lai'}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{b.user?.phoneNumber || 'Chưa có SĐT'}</p>
-                    </td>
-                    <td className="py-4 px-6 font-medium text-emerald-800">
-                      {b.court?.name || 'Sân Cầu Lông'}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="font-semibold">{b.bookingDate}</span> ({b.startTime} - {b.endTime})
-                    </td>
-                    <td className="py-4 px-6 font-bold text-emerald-700">
-                      {b.totalPrice.toLocaleString('vi-VN')} đ
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${
-                          b.status === 'CONFIRMED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : b.status === 'COMPLETED'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {b.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <select
-                        value={b.status}
-                        onChange={(e) => handleStatusChange(b._id, e.target.value)}
-                        className={`border rounded-lg px-2.5 py-1 text-xs outline-none font-semibold transition cursor-pointer ${
-                          b.status === 'CANCELLED'
-                            ? 'border-red-300 bg-red-50 text-red-700'
-                            : b.status === 'COMPLETED'
-                            ? 'border-blue-300 bg-blue-50 text-blue-700'
-                            : 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                        }`}
-                      >
-                        <option value="CONFIRMED">CONFIRMED</option>
-                        <option value="COMPLETED">COMPLETED</option>
-                        <option value="CANCELLED">CANCELLED</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))
+                filteredBookings.map((b) => {
+                  // Bóc tách tên khách và số điện thoại từ note nếu có
+                  const guestMatch = b.note ? b.note.match(/Khách:\s*([^-\n]+)/i) : null;
+                  const phoneMatch = b.note ? b.note.match(/SĐT:\s*([^\[\n]+)/i) : null;
+                  const guestName = guestMatch ? guestMatch[1].trim() : (b.user?.fullName || 'Khách vãng lai');
+                  const guestPhone = phoneMatch ? phoneMatch[1].trim() : (b.user?.phoneNumber || '');
+
+                  // Bóc tách số thảm con từ note (ví dụ: Sân 1, Sân 4)
+                  const subCourtMatch = b.note ? b.note.match(/\[(Sân\s*\d+)/i) : null;
+                  const subCourtName = subCourtMatch ? subCourtMatch[1] : '';
+
+                  return (
+                    <tr key={String(b._id)} className="hover:bg-gray-50/60 transition">
+                      {/* 1. Tài khoản đặt */}
+                      <td className="py-4 px-4">
+                        <p className="font-bold text-gray-900">{b.user?.fullName || 'Khách vãng lai'}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{b.user?.phoneNumber || 'Chưa có SĐT'}</p>
+                      </td>
+
+                      {/* 2. Người đặt (Khách) */}
+                      <td className="py-4 px-4">
+                        <p className="font-semibold text-emerald-800">{guestName}</p>
+                        {guestPhone && (
+                          <p className="text-[11px] text-gray-500 mt-0.5">{guestPhone}</p>
+                        )}
+                      </td>
+
+                      {/* 3. Sân & Thảm con */}
+                      <td className="py-4 px-4 font-medium text-emerald-800">
+                        <div>{b.court?.name || 'Sân Cầu Lông'}</div>
+                        {subCourtName && (
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded">
+                            {subCourtName}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 4. Ngày & Giờ */}
+                      <td className="py-4 px-4">
+                        <span className="font-semibold">{b.bookingDate}</span> ({b.startTime} - {b.endTime})
+                      </td>
+
+                      {/* 5. Tổng tiền */}
+                      <td className="py-4 px-4 font-bold text-emerald-700">
+                        {b.totalPrice.toLocaleString('vi-VN')} đ
+                      </td>
+
+                      {/* 6. Trạng thái */}
+                      <td className="py-4 px-4">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${
+                            b.status === 'CONFIRMED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : b.status === 'COMPLETED'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {b.status}
+                        </span>
+                      </td>
+
+                      {/* 7. Hành động */}
+                      <td className="py-4 px-4">
+                        <select
+                          value={b.status}
+                          onChange={(e) => handleStatusChange(b._id, e.target.value)}
+                          className={`border rounded-lg px-2.5 py-1 text-xs outline-none font-semibold transition cursor-pointer ${
+                            b.status === 'CANCELLED'
+                              ? 'border-red-300 bg-red-50 text-red-700'
+                              : b.status === 'COMPLETED'
+                              ? 'border-blue-300 bg-blue-50 text-blue-700'
+                              : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          <option value="CONFIRMED">CONFIRMED</option>
+                          <option value="COMPLETED">COMPLETED</option>
+                          <option value="CANCELLED">CANCELLED</option>
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
